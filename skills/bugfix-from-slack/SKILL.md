@@ -50,6 +50,21 @@ GH_TOKEN=$(mint-agent-token) gh issue create -R BrainCOGS/<repo> \
   --title "[BUG] <one-line summary>" --body-file <issue.md>
 ```
 
+Then confirm the bot opened it. The author must be `app/braincogs-claude-agent`:
+
+```bash
+gh issue view <issue-url> --json author -q .author.login
+```
+
+If the author is anyone else, stop and tell the user. Don't close or re-file the
+issue yourself.
+
+A PreToolUse hook (`claude-hooks/require_agent_bot.py`) blocks
+`gh issue create`/`gh pr create` (and `gh api` POSTs to issues/pulls) in
+BrainCOGS repos unless they carry the inline `GH_TOKEN=$(mint-agent-token)` and
+an explicit `-R BrainCOGS/<repo>`. It also blocks GitHub MCP tools from opening
+them. If it blocks you, fix the command; don't work around the hook.
+
 Skip this step if the repo has issues turned off (element-array-ephys,
 element-calcium-imaging, iblapps). Put the same sections in the PR body instead.
 
@@ -92,6 +107,9 @@ GH_TOKEN=$(mint-agent-token) gh pr create -R BrainCOGS/<repo> \
   --title "fix: <summary>" --body-file <pr.md>
 GH_TOKEN=$(mint-agent-token) gh issue edit <issue> -R BrainCOGS/<repo> --body-file <issue.md>  # Linked PR: #<pr>
 ```
+
+Confirm the bot opened the PR too: `gh pr view <pr-url> --json author -q .author.login`
+must print `app/braincogs-claude-agent`.
 
 The PR body:
 - starts with `:robot: _AI text below_ :robot:`

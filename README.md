@@ -6,6 +6,8 @@ Skills and helpers for AI agents working on BrainCOGS repos.
 agent-tooling/
 ├── bin/
 │   └── mint-agent-token        # short-lived token for the braincogs-claude-agent bot
+├── claude-hooks/
+│   └── require_agent_bot.py    # PreToolUse hook: BrainCOGS issues/PRs only as the bot
 ├── hooks/
 │   └── check_ai_attribution.py # commit-msg hook + CI check, vendored into each repo
 ├── skills/
@@ -27,6 +29,33 @@ git clone <this repo> ~/code/agent-tooling
 `install.sh` symlinks `bin/*` into `~/.local/bin/` and each `skills/<name>/` into
 `~/.claude/skills/<name>`, so a `git pull` here updates them. Re-run it after
 adding a skill or a command.
+
+Register the Claude Code hook once in `~/.claude/settings.json`. `install.sh`
+doesn't edit settings.
+
+```json
+"hooks": {
+  "PreToolUse": [
+    { "matcher": "Bash",
+      "hooks": [{ "type": "command", "timeout": 10,
+                  "command": "python3 ~/code/agent-tooling/claude-hooks/require_agent_bot.py" }] },
+    { "matcher": "mcp__.*github.*",
+      "hooks": [{ "type": "command", "timeout": 10,
+                  "command": "python3 ~/code/agent-tooling/claude-hooks/require_agent_bot.py" }] }
+  ]
+}
+```
+
+It blocks any command that would open an issue or PR in a BrainCOGS repo with
+the user's account:
+- `gh issue create` or `gh pr create` without an inline `GH_TOKEN=$(mint-agent-token)`
+- the same commands in a BrainCOGS checkout without an explicit `-R BrainCOGS/<repo>`
+- `gh api` POSTs to `.../issues` or `.../pulls`
+- GitHub MCP create tools
+
+Everything else passes untouched, and an unreadable payload fails closed. The
+hook only covers Claude Code on machines where it's registered. Other agents, and
+people at the web UI, can still open issues as themselves.
 
 `mint-agent-token` needs the bot's private key at
 `~/.config/braincogs-agent/agent.pem` (`AGENT_APP_KEY` overrides the path). The
