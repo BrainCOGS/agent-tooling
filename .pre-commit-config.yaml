@@ -19,7 +19,9 @@ repos:
   rev: v0.16.10
   hooks:
     - id: ruff-check
-      args: ["--fix", "--show-fixes"]
+      # --ignore-noqa: hooks/check_ai_attribution.py opts out of the vendoring
+      # repos' ruff with `# ruff: noqa`, but is checked here.
+      args: ["--fix", "--show-fixes", "--ignore-noqa"]
       # bin/ scripts have no .py extension.
       types_or: [python]
     - id: ruff-format

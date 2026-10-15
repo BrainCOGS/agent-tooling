@@ -42,6 +42,11 @@ Standard library only, Python >= 3.9, so it runs from prek/pre-commit or a bare
 `python3` on any OS.
 """
 
+# Vendored copies must stay byte-identical to the canonical one, so the repos'
+# own linters and formatters (each with its own rules and line length) leave this
+# file alone. agent-tooling checks it with `ruff check --ignore-noqa`.
+# ruff: noqa
+# fmt: off
 from __future__ import annotations
 
 import argparse
