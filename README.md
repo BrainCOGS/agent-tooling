@@ -109,6 +109,12 @@ tech_calendar_streamlit 30 (8 PRs), WaterPubsGUI 3, U19-pipeline-matlab 7.
 2. Copy the file to each repo's `.github/scripts/check_ai_attribution.py` in a PR.
    Don't edit a vendored copy.
 
+The file opts out of each repo's ruff (`# ruff: noqa`, `# fmt: off`), so the
+repos' different rules and line lengths leave it byte-identical. This repo still
+lints it with `--ignore-noqa`. A repo that enables ruff's `PGH` rules also needs
+`".github/scripts/check_ai_attribution.py" = ["PGH004"]` under
+`[lint.per-file-ignores]`, as in WaterPubsGUI.
+
 Each repo wires it up in `.pre-commit-config.yaml`:
 
 ```yaml
