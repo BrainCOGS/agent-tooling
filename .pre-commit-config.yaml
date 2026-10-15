@@ -41,9 +41,9 @@ repos:
       entry: python hooks/check_ai_attribution.py
       stages: [commit-msg]
     - id: tests
-      name: check_ai_attribution tests
+      name: hook tests
       language: python
       entry: python -m pytest -q -p no:cacheprovider
       additional_dependencies: [pytest]
-      files: ^(hooks|tests)/
+      files: ^(hooks|claude-hooks|tests)/
       pass_filenames: false
