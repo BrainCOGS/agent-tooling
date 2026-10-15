@@ -98,7 +98,11 @@ MODEL_RULES = [
     ),
     (re.compile(r"kimi", re.I), re.compile(r"kimi-[a-z0-9.-]+"), "kimi-k2.6"),
     (re.compile(r"glm", re.I), re.compile(r"glm-[a-z0-9.-]+"), "glm-5.1"),
-    (re.compile(r"deepseek", re.I), re.compile(r"deepseek-[a-z0-9.-]+"), "deepseek-v3.2"),
+    (
+        re.compile(r"deepseek", re.I),
+        re.compile(r"deepseek-[a-z0-9.-]+"),
+        "deepseek-v3.2",
+    ),
     (re.compile(r"qwen", re.I), re.compile(r"qwen[a-z0-9.-]+"), "qwen3-coder-plus"),
     (re.compile(r"grok", re.I), re.compile(r"grok-[a-z0-9.-]+"), "grok-code-fast-1"),
     (
@@ -157,7 +161,9 @@ AGENT_NAME_RE = re.compile(
 AGENT_SUFFIX_RE = re.compile(r"\((?:aider|ai|bot|agent|assistant)\)\s*$", re.I)
 # A GitHub App account: login[bot], or its <id>+login[bot]@users.noreply.github.com.
 BOT_RE = re.compile(r"\[bot\]", re.I)
-NOREPLY_LOGIN_RE = re.compile(r"^(?:\d+\+)?(?P<login>[^@]+)@users\.noreply\.github\.com$", re.I)
+NOREPLY_LOGIN_RE = re.compile(
+    r"^(?:\d+\+)?(?P<login>[^@]+)@users\.noreply\.github\.com$", re.I
+)
 
 
 def is_agent(name: str, email: str) -> str | None:
@@ -192,9 +198,7 @@ AGENT_WORD_RE = re.compile(
 )
 SCISSORS = "------------------------ >8 ------------------------"
 
-FORMAT_HINT = (
-    "write it as `Assisted-by: <Harness>:<model>`, e.g. `Assisted-by: ClaudeCode:claude-opus-5-5`"
-)
+FORMAT_HINT = "write it as `Assisted-by: <Harness>:<model>`, e.g. `Assisted-by: ClaudeCode:claude-opus-5-5`"
 
 
 def _norm(s: str) -> str:
@@ -211,9 +215,13 @@ def check_assisted_by(line: str) -> list[str]:
     if canonical and harness != canonical:
         errors.append(f"spell the harness `{canonical}`, not `{harness}`")
     elif not canonical and not HARNESS_RE.fullmatch(harness):
-        errors.append(f"the harness must be one word (letters, digits, . + -), not `{harness}`")
+        errors.append(
+            f"the harness must be one word (letters, digits, . + -), not `{harness}`"
+        )
     if "/" in model:
-        errors.append(f"drop the provider prefix from the model: `{model.rpartition('/')[2]}`")
+        errors.append(
+            f"drop the provider prefix from the model: `{model.rpartition('/')[2]}`"
+        )
     else:
         for vendor, id_re, example in MODEL_RULES:
             if vendor.search(model):
@@ -316,8 +324,13 @@ def check_since(base: str, head: str = "HEAD") -> list[str]:
         except subprocess.CalledProcessError:
             known = False
     if not known:
-        print(f"check_ai_attribution: base {base!r} unknown, checking {head} only", file=sys.stderr)
-    commits = _git("rev-list", f"{base}..{head}" if known else "-1", *([] if known else [head]))
+        print(
+            f"check_ai_attribution: base {base!r} unknown, checking {head} only",
+            file=sys.stderr,
+        )
+    commits = _git(
+        "rev-list", f"{base}..{head}" if known else "-1", *([] if known else [head])
+    )
     commits = commits.split()
     errors = []
     for sha in commits:
@@ -325,7 +338,9 @@ def check_since(base: str, head: str = "HEAD") -> list[str]:
             "show", "-s", "--format=%an%x00%ae%x00%cn%x00%ce%x00%B", sha
         ).split("\0", 4)
         errs = check_identities((an, ae), (cn, ce)) + check_message(body)
-        errors += [f"{sha[:10]} {body.splitlines()[0] if body else ''}\n  {e}" for e in errs]
+        errors += [
+            f"{sha[:10]} {body.splitlines()[0] if body else ''}\n  {e}" for e in errs
+        ]
     print(f"check_ai_attribution: checked {len(commits)} commit(s)", file=sys.stderr)
     return errors
 
@@ -333,9 +348,15 @@ def check_since(base: str, head: str = "HEAD") -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("msg_file", nargs="?", help="commit message file (commit-msg hook)")
-    group.add_argument("--since", metavar="BASE", help="check the commits in BASE..--head")
-    parser.add_argument("--head", default="HEAD", help="last commit to check (default HEAD)")
+    group.add_argument(
+        "msg_file", nargs="?", help="commit message file (commit-msg hook)"
+    )
+    group.add_argument(
+        "--since", metavar="BASE", help="check the commits in BASE..--head"
+    )
+    parser.add_argument(
+        "--head", default="HEAD", help="last commit to check (default HEAD)"
+    )
     args = parser.parse_args(argv)
     if args.since is not None:
         errors = check_since(args.since, args.head or "HEAD")

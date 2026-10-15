@@ -204,7 +204,10 @@ def test_every_problem_reported():
     [
         ("Christian Tabedzki", "35670232+tabedzki@users.noreply.github.com"),
         ("dependabot[bot]", "49699333+dependabot[bot]@users.noreply.github.com"),
-        ("github-actions[bot]", "41898282+github-actions[bot]@users.noreply.github.com"),
+        (
+            "github-actions[bot]",
+            "41898282+github-actions[bot]@users.noreply.github.com",
+        ),
         ("GitHub", "noreply@github.com"),
         ("Kimi Laine", "kimi@princeton.edu"),
         ("", ""),
@@ -220,7 +223,10 @@ def test_is_agent_people_and_automation(name, email):
         ("copilot-swe-agent[bot]", "198982749+Copilot@users.noreply.github.com"),
         ("Claude", "noreply@anthropic.com"),
         ("claude[bot]", "209825114+claude[bot]@users.noreply.github.com"),
-        ("braincogs-claude-agent[bot]", "1+braincogs-claude-agent[bot]@users.noreply.github.com"),
+        (
+            "braincogs-claude-agent[bot]",
+            "1+braincogs-claude-agent[bot]@users.noreply.github.com",
+        ),
         ("Jane Doe", "123+Copilot@users.noreply.github.com"),
         ("Jane Doe (aider)", "jane@princeton.edu"),
         ("Someone", "bot@sub.openai.com"),
@@ -264,7 +270,9 @@ def repo(tmp_path, monkeypatch):
 
 
 def run(*args):
-    return subprocess.run([sys.executable, str(HOOK), *args], capture_output=True, text=True)
+    return subprocess.run(
+        [sys.executable, str(HOOK), *args], capture_output=True, text=True
+    )
 
 
 def test_since_flags_only_bad_commits(repo):
@@ -278,7 +286,9 @@ def test_since_flags_only_bad_commits(repo):
         "ok\n\nAssisted-by: ClaudeCode:claude-opus-5-5",
         env=ME,
     )
-    git(repo, "commit", "-q", "--allow-empty", "-m", "bot commit", env={**ME, **COPILOT})
+    git(
+        repo, "commit", "-q", "--allow-empty", "-m", "bot commit", env={**ME, **COPILOT}
+    )
     git(
         repo,
         "commit",
@@ -298,14 +308,24 @@ def test_since_flags_only_bad_commits(repo):
 
 def test_since_clean_range(repo):
     base = git(repo, "rev-parse", "HEAD")
-    git(repo, "commit", "-q", "--allow-empty", "-m", "ok\n\nAssisted-by: Pi:glm-5.1", env=ME)
+    git(
+        repo,
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "ok\n\nAssisted-by: Pi:glm-5.1",
+        env=ME,
+    )
     r = run("--since", base)
     assert r.returncode == 0, r.stderr
 
 
 @pytest.mark.parametrize("base", ["", "0" * 40, "deadbeef" * 5])
 def test_since_unknown_base_checks_head_only(repo, base):
-    git(repo, "commit", "-q", "--allow-empty", "-m", "bot commit", env={**ME, **COPILOT})
+    git(
+        repo, "commit", "-q", "--allow-empty", "-m", "bot commit", env={**ME, **COPILOT}
+    )
     git(repo, "commit", "-q", "--allow-empty", "-m", "fine", env=ME)
     r = run("--since", base)
     assert r.returncode == 0, r.stderr
