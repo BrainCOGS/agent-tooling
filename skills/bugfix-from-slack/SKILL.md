@@ -19,7 +19,7 @@ the app has issues and pull-requests permissions only, no contents.
 
 ## 0. Read the repo's instructions
 
-Read the repo's `CLAUDE.md` for how to run its tests, its version pins and any
+Read the repo's `AGENTS.md` for how to run its tests, its version pins and any
 other quirks. Find the default branch with
 `gh repo view BrainCOGS/<repo> --json defaultBranchRef -q .defaultBranchRef.name`.
 

@@ -67,7 +67,7 @@ key is never committed here: `*.pem` is gitignored, and gitleaks and
 | What                                              | Where                                                                 |
 | ------------------------------------------------- | --------------------------------------------------------------------- |
 | Workflow skills, `mint-agent-token`               | this repo, linked into `~/.claude/skills/` and `~/.local/bin/`        |
-| How to run a repo's tests, its version pins       | that repo's `CLAUDE.md`                                               |
+| How to run a repo's tests, its version pins       | that repo's `AGENTS.md` (read by Claude Code and other agents)        |
 | Agent bug report template                         | each repo's `.github/ISSUE_TEMPLATE/agent_bug_report.md` (copy of `templates/`) |
 | AI attribution check                              | each repo's `.github/scripts/check_ai_attribution.py` (copy of `hooks/`) |
 
