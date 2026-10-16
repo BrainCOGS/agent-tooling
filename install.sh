@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Link this repo's tools into place, so `git pull` here updates them:
-#   bin/*            -> ~/.local/bin/
 #   skills/<name>/   -> ~/.claude/skills/<name>
-# Re-run after adding a skill or a command. Safe to re-run.
+# Re-run after adding a skill. Safe to re-run.
 set -euo pipefail
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
@@ -21,6 +20,5 @@ link() {  # link <target> <link path>
     echo "$path -> $target"
 }
 
-mkdir -p ~/.local/bin ~/.claude/skills
-for f in "$repo"/bin/*; do link "$f" ~/.local/bin/"$(basename "$f")"; done
+mkdir -p ~/.claude/skills
 for d in "$repo"/skills/*/; do d=${d%/}; link "$d" ~/.claude/skills/"$(basename "$d")"; done

@@ -1,5 +1,4 @@
-# The GitHub App's private key lives in ~/.config/braincogs-agent/, never here.
-# Safety net in case one is copied in by mistake (gitleaks would also catch it).
+# Safety net in case a private key is copied in by mistake (gitleaks would also catch it).
 *.pem
 *.key
 

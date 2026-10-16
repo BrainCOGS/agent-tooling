@@ -4,19 +4,13 @@ Skills and helpers for AI agents working on BrainCOGS repos.
 
 ```
 agent-tooling/
-├── bin/
-│   └── mint-agent-token        # short-lived token for the braincogs-claude-agent bot
-├── claude-hooks/
-│   └── require_agent_bot.py    # PreToolUse hook: BrainCOGS issues only as the bot
 ├── hooks/
 │   └── check_ai_attribution.py # commit-msg hook + CI check, vendored into each repo
 ├── skills/
 │   └── bugfix-from-slack/
-│       └── SKILL.md            # Slack error -> regression test -> issue -> fix -> PR
-├── templates/
-│   └── agent_bug_report.md     # canonical copy of each repo's issue template
+│       └── SKILL.md            # Slack error -> regression test -> fix -> draft PR
 ├── tests/                      # tests for hooks/
-└── install.sh                  # links bin/ and skills/ into place
+└── install.sh                  # links skills/ into place
 ```
 
 ## Install
@@ -26,51 +20,25 @@ git clone <this repo> ~/code/agent-tooling
 ~/code/agent-tooling/install.sh
 ```
 
-`install.sh` symlinks `bin/*` into `~/.local/bin/` and each `skills/<name>/` into
-`~/.claude/skills/<name>`, so a `git pull` here updates them. Re-run it after
-adding a skill or a command.
+`install.sh` symlinks each `skills/<name>/` into `~/.claude/skills/<name>`, so a
+`git pull` here updates them. Re-run it after adding a skill.
 
-Register the Claude Code hook once in `~/.claude/settings.json`. `install.sh`
-doesn't edit settings.
+Agents have no GitHub identity of their own here. Commits, pushes, issues and
+PRs all go through the user's account, and the commits disclose the agent with
+an `Assisted-by` trailer. If your harness adds its own attribution (Claude Code
+adds a `Co-Authored-By` trailer and a "Generated with" line by default), turn it
+off. For Claude Code, in `~/.claude/settings.json`:
 
 ```json
-"hooks": {
-  "PreToolUse": [
-    { "matcher": "Bash",
-      "hooks": [{ "type": "command", "timeout": 10,
-                  "command": "python3 ~/code/agent-tooling/claude-hooks/require_agent_bot.py" }] },
-    { "matcher": "mcp__.*github.*",
-      "hooks": [{ "type": "command", "timeout": 10,
-                  "command": "python3 ~/code/agent-tooling/claude-hooks/require_agent_bot.py" }] }
-  ]
-}
+"attribution": { "commit": "", "pr": "" }
 ```
-
-It blocks any command that would open an issue in a BrainCOGS repo with the
-user's account:
-- `gh issue create` without an inline `GH_TOKEN=$(mint-agent-token)`
-- the same command in a BrainCOGS checkout without an explicit `-R BrainCOGS/<repo>`
-- `gh api` POSTs to `.../issues`
-- GitHub MCP issue-create tools
-
-Pull requests aren't checked. The user opens those from their own account.
-
-Everything else passes untouched, and an unreadable payload fails closed. The
-hook only covers Claude Code on machines where it's registered. Other agents, and
-people at the web UI, can still open issues as themselves.
-
-`mint-agent-token` needs the bot's private key at
-`~/.config/braincogs-agent/agent.pem` (`AGENT_APP_KEY` overrides the path). The
-key is never committed here: `*.pem` is gitignored, and gitleaks and
-`detect-private-key` run on every commit (`prek install`).
 
 ## Where things live
 
 | What                                              | Where                                                                 |
 | ------------------------------------------------- | --------------------------------------------------------------------- |
-| Workflow skills, `mint-agent-token`               | this repo, linked into `~/.claude/skills/` and `~/.local/bin/`        |
+| Workflow skills                                   | this repo, linked into `~/.claude/skills/`                            |
 | How to run a repo's tests, its version pins       | that repo's `AGENTS.md` (read by Claude Code and other agents)        |
-| Agent bug report template                         | each repo's `.github/ISSUE_TEMPLATE/agent_bug_report.md` (copy of `templates/`) |
 | AI attribution check                              | each repo's `.github/scripts/check_ai_attribution.py` (copy of `hooks/`) |
 
 ## Attribution policy
@@ -85,11 +53,10 @@ key is never committed here: `*.pem` is gitignored, and gitleaks and
   `Signed-off-by`. The exceptions are non-AI automation: Dependabot, GitHub
   Actions, Renovate, pre-commit.ci, and the GitHub web UI as committer.
 - No `Generated with <agent>` lines in commit messages.
-- The bot (`braincogs-claude-agent`) opens issues. PRs, commits and pushes
-  stay with the human who ran the agent. A PR opened by an agent account
-  (Copilot coding agent, other GitHub Apps) is a different case: GitHub
-  attributes its squash commit to that account, so merge it with "Rebase and
-  merge" (see tech_calendar_streamlit `78c6983`: author
+- Issues, PRs, commits and pushes all stay with the human who ran the agent.
+  A PR opened by an agent account (Copilot coding agent, other GitHub Apps) is
+  the exception: GitHub attributes its squash commit to that account, so merge
+  it with "Rebase and merge" (see tech_calendar_streamlit `78c6983`: author
   `copilot-swe-agent[bot]`, `Co-authored-by: tabedzki`). The CI check on pushes
   to the default branch flags it if this happens.
 

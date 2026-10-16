@@ -12,7 +12,7 @@ repos:
     - id: end-of-file-fixer
     - id: trailing-whitespace
     - id: check-executables-have-shebangs
-    # A second net for the App's private key, besides .gitignore and gitleaks.
+    # A second net for private keys, besides .gitignore and gitleaks.
     - id: detect-private-key
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -22,7 +22,6 @@ repos:
       # --ignore-noqa: hooks/check_ai_attribution.py opts out of the vendoring
       # repos' ruff with `# ruff: noqa`, but is checked here.
       args: ["--fix", "--show-fixes", "--ignore-noqa"]
-      # bin/ scripts have no .py extension.
       types_or: [python]
     - id: ruff-format
       types_or: [python]
@@ -45,5 +44,5 @@ repos:
       language: python
       entry: python -m pytest -q -p no:cacheprovider
       additional_dependencies: [pytest]
-      files: ^(hooks|claude-hooks|tests)/
+      files: ^(hooks|tests)/
       pass_filenames: false
