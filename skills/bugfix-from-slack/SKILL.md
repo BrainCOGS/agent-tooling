@@ -1,17 +1,22 @@
 ---
 name: bugfix-from-slack
-description: Use when fixing an error someone reported in Slack (a traceback, a failed cron job or alert, a rig error) in a BrainCOGS repo. Reproduces it with a regression test, files an agent bug report issue with the error exactly as the user pasted it, fixes it, commits with the standard Assisted-by trailer and opens a draft PR. All from the user's account.
+description: Use when the user pastes or mentions an error (a traceback, a failed cron job or alert, a rig error, a Slack report) or you hit a bug while working in a BrainCOGS repo. Reproduces it with a regression test, files an agent bug report issue with the error exactly as the user pasted it, fixes it, commits with the standard Assisted-by trailer and opens a draft PR. All from the user's account.
 ---
 
-# Fix a Slack-reported error in a BrainCOGS repo
+# Report and fix an error in a BrainCOGS repo
+
+Canonical copy: <https://github.com/BrainCOGS/agent-tooling>
+(`skills/bugfix-from-slack/SKILL.md`). Repos vendor it byte-identical at
+`.claude/skills/bugfix-from-slack/SKILL.md`; change it in agent-tooling and
+re-run `bin/vendor`, don't edit a vendored copy.
 
 Everything goes through the user's own account: commits (their git config),
 the push (their credentials), and the issue and PR (their `gh` login). The agent
 has no GitHub identity of its own. Humans author commits; AI help is disclosed
 with an `Assisted-by` trailer, never credited as an author.
 
-The same issue-first routine applies to any bug you hit or are asked to fix in
-a BrainCOGS repo, not only ones from Slack. The user's data pipelines
+This applies to any bug you hit or are asked to fix in a BrainCOGS repo, not
+only ones reported in Slack. The user's data pipelines
 (U19-pipeline-python, U19-pipeline-matlab) and the Streamlit apps
 (tech_calendar_streamlit) are where it matters most: always file the issue
 before you change code there, even for a small fix. That is how bugs get logged.

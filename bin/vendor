@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Copy the shared files into BrainCOGS repo checkouts, byte-identical:
+#   skills/bugfix-from-slack/SKILL.md     -> .claude/skills/bugfix-from-slack/SKILL.md
+#   templates/agent_bug_report.md         -> .github/ISSUE_TEMPLATE/agent_bug_report.md
+#   hooks/check_ai_attribution.py         -> .github/scripts/check_ai_attribution.py
+#                                            (only if the repo already has it)
+# Usage: bin/vendor [--check] <repo checkout>...
+# --check changes nothing and exits 1 if any copy differs or is missing.
+set -euo pipefail
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+check=0
+if [[ ${1:-} == --check ]]; then check=1; shift; fi
+(($#)) || { sed -n '2,8p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+
+drift=0
+sync() {  # sync <source> <destination in repo> <repo>
+    local src=$here/$1 dest=$3/$2
+    if cmp -s "$src" "$dest"; then return; fi
+    if ((check)); then
+        echo "differs: $dest" >&2; drift=1
+    else
+        mkdir -p "$(dirname "$dest")"; cp "$src" "$dest"; echo "wrote $dest"
+    fi
+}
+
+for repo in "$@"; do
+    [[ -d $repo/.git ]] || { echo "not a git checkout: $repo" >&2; exit 2; }
+    sync skills/bugfix-from-slack/SKILL.md .claude/skills/bugfix-from-slack/SKILL.md "$repo"
+    sync templates/agent_bug_report.md .github/ISSUE_TEMPLATE/agent_bug_report.md "$repo"
+    if [[ -e $repo/.github/scripts/check_ai_attribution.py ]]; then
+        sync hooks/check_ai_attribution.py .github/scripts/check_ai_attribution.py "$repo"
+    fi
+done
+exit $drift

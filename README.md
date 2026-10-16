@@ -4,6 +4,8 @@ Skills and helpers for AI agents working on BrainCOGS repos.
 
 ```
 agent-tooling/
+├── bin/
+│   └── vendor                  # copy the shared files into repo checkouts (--check to find drift)
 ├── hooks/
 │   └── check_ai_attribution.py # commit-msg hook + CI check, vendored into each repo
 ├── skills/
@@ -18,9 +20,12 @@ agent-tooling/
 ## Install
 
 ```bash
-git clone <this repo> ~/code/agent-tooling
+git clone git@github.com:BrainCOGS/agent-tooling.git ~/code/agent-tooling
 ~/code/agent-tooling/install.sh
 ```
+
+Repos also carry their own copy of the skill (see below), so you only need this
+for repos that don't, and to edit the canonical copy.
 
 `install.sh` symlinks each `skills/<name>/` into `~/.claude/skills/<name>`, so a
 `git pull` here updates them. Re-run it after adding a skill.
@@ -39,7 +44,7 @@ off. For Claude Code, in `~/.claude/settings.json`:
 
 | What                                              | Where                                                                 |
 | ------------------------------------------------- | --------------------------------------------------------------------- |
-| Workflow skills                                   | this repo, linked into `~/.claude/skills/`                            |
+| Workflow skills                                   | this repo, linked into `~/.claude/skills/`; vendored into each repo's `.claude/skills/` |
 | How to run a repo's tests, its version pins       | that repo's `AGENTS.md` (read by Claude Code and other agents)        |
 | Agent bug report template                         | each repo's `.github/ISSUE_TEMPLATE/agent_bug_report.md` (copy of `templates/`) |
 | AI attribution check                              | each repo's `.github/scripts/check_ai_attribution.py` (copy of `hooks/`) |
@@ -101,12 +106,26 @@ tech_calendar_streamlit 30 (8 PRs), WaterPubsGUI 3, U19-pipeline-matlab 7.
   git push --force-with-lease
   ```
 
+## Vendoring
+
+This repo is the one canonical place. Each repo carries byte-identical copies, so
+a clone (and a cloud agent) has everything without installing anything:
+
+```bash
+bin/vendor ~/code/U19-pipeline-python ~/code/tech_calendar_streamlit   # copy
+bin/vendor --check ~/code/U19-pipeline-python                          # drift? exits 1
+```
+
+Then open a PR in each repo from your account. Never edit a vendored copy; change
+it here and re-run `bin/vendor`. Per-repo details (how to run tests, version
+pins) stay in that repo's `AGENTS.md`, which is why the skill itself needs no
+per-repo edits.
+
 ## Changing the attribution check
 
 1. Edit `hooks/check_ai_attribution.py` and `tests/`, then run
    `uv run --no-project --with pytest pytest`.
-2. Copy the file to each repo's `.github/scripts/check_ai_attribution.py` in a PR.
-   Don't edit a vendored copy.
+2. Run `bin/vendor` on each repo and open a PR. Don't edit a vendored copy.
 
 The file opts out of each repo's ruff (`# ruff: noqa`, `# fmt: off`), so the
 repos' different rules and line lengths leave it byte-identical. This repo still
