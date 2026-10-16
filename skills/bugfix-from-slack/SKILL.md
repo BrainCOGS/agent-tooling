@@ -1,14 +1,20 @@
 ---
 name: bugfix-from-slack
-description: Use when fixing an error someone reported in Slack (a traceback, a failed cron job or alert, a rig error) in a BrainCOGS repo. Reproduces it with a regression test, fixes it, commits with the standard Assisted-by trailer and opens a draft PR from the user's account.
+description: Use when fixing an error someone reported in Slack (a traceback, a failed cron job or alert, a rig error) in a BrainCOGS repo. Reproduces it with a regression test, files an agent bug report issue with the error exactly as the user pasted it, fixes it, commits with the standard Assisted-by trailer and opens a draft PR. All from the user's account.
 ---
 
 # Fix a Slack-reported error in a BrainCOGS repo
 
 Everything goes through the user's own account: commits (their git config),
-the push (their credentials) and the PR (their `gh` login). The agent files
-nothing on its own and has no GitHub identity of its own. Humans author commits;
-AI help is disclosed with an `Assisted-by` trailer, never credited as an author.
+the push (their credentials), and the issue and PR (their `gh` login). The agent
+has no GitHub identity of its own. Humans author commits; AI help is disclosed
+with an `Assisted-by` trailer, never credited as an author.
+
+The same issue-first routine applies to any bug you hit or are asked to fix in
+a BrainCOGS repo, not only ones from Slack. The user's data pipelines
+(U19-pipeline-python, U19-pipeline-matlab) and the Streamlit apps
+(tech_calendar_streamlit) are where it matters most: always file the issue
+before you change code there, even for a small fix. That is how bugs get logged.
 
 ## 0. Read the repo's instructions
 
@@ -18,22 +24,41 @@ other quirks. Find the default branch with
 
 ## 1. Reproduce with a regression test first
 
-- Copy the Slack link and the error text exactly as posted (traceback, log
-  lines). Don't paraphrase.
+- Keep the error text exactly as the user pasted it (traceback, log lines).
+  Don't paraphrase or trim it, and don't ask for or invent a Slack link.
 - Write a test that fails the same way the report does, before you change any
   code. Run it and confirm it fails with that error on the base commit. Note the
   base commit's short SHA.
 - Cover the corner cases around the bug too: empty, zero, `None`, one versus many,
   numpy arrays versus lists, missing keys.
 
-## 2. Fix on a branch
+## 2. File the issue
+
+Fill in `.github/ISSUE_TEMPLATE/agent_bug_report.md` from the repo (the
+canonical copy is `templates/agent_bug_report.md` in agent-tooling). Keep its
+`:robot: _AI text below_ :robot:` line at the top and fill in every section:
+
+- **Reported error**: the pasted error text in a code block, verbatim.
+- **Regression test**: `path::test_name`, and that it fails on `<base sha>`
+  with that error.
+- **Root cause**: what is wrong and why, with `file.py:line` references.
+- **Linked PR**: leave as `TBD` for now; step 5 fills it in.
+
+```bash
+gh issue create -R BrainCOGS/<repo> --title "[BUG] <one-line summary>" --body-file <issue.md>
+```
+
+Skip this step only if the repo has issues turned off (element-array-ephys,
+element-calcium-imaging, iblapps). Put the same sections in the PR body instead.
+
+## 3. Fix on a branch
 
 - Branch from the default branch: `<user>/fix/<id>`, where `<user>` comes from
   `gh api user --jq .login`.
 - Make the smallest fix that makes the regression test pass. Then run the full
   test suite and `uvx prek run --all-files`.
 
-## 3. Commit as the user, with one trailer
+## 4. Commit as the user, with one trailer
 
 Use Conventional Commits, and end the message with one trailer per agent:
 
@@ -58,12 +83,13 @@ Assisted-by: ClaudeCode:claude-opus-5-5
   fix the message; never use `--no-verify`. If the hook isn't installed in this
   checkout, run `prek install`.
 
-## 4. Push and open the PR
+## 5. Push and open the PR
 
 ```bash
 git push -u origin <branch>
 gh pr create -R BrainCOGS/<repo> --base <default-branch> --head <branch> \
   --draft --title "fix: <summary>" --body-file <pr.md>
+gh issue edit <issue> -R BrainCOGS/<repo> --body-file <issue.md>  # Linked PR: #<pr>
 ```
 
 Always pass `-R BrainCOGS/<repo>`. The element repos are forks, so a bare
@@ -71,11 +97,10 @@ Always pass `-R BrainCOGS/<repo>`. The element repos are forks, so a bare
 
 The PR body:
 - starts with `:robot: _AI text below_ :robot:`
-- **Report**: the Slack link, and the error text in a code block, verbatim
-- **Regression test**: `path::test_name`, and that it fails on `<base sha>`
-  with that error
-- **Root cause**: what is wrong and why, with `file.py:line` references
-- covers the fix and the tests
+- has `Fixes #<issue>` (or, for a repo without issues, the **Reported error**,
+  **Regression test** and **Root cause** sections from step 2)
+- covers the problem, the fix, and the tests, including that the regression
+  test failed before the fix
 - ends with the same `Assisted-by` trailer
 
 When the work is done, mark the PR ready (`gh pr ready ...`). Keep the

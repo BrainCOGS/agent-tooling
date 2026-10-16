@@ -8,7 +8,9 @@ agent-tooling/
 │   └── check_ai_attribution.py # commit-msg hook + CI check, vendored into each repo
 ├── skills/
 │   └── bugfix-from-slack/
-│       └── SKILL.md            # Slack error -> regression test -> fix -> draft PR
+│       └── SKILL.md            # reported error -> regression test -> issue -> fix -> draft PR
+├── templates/
+│   └── agent_bug_report.md     # canonical copy of each repo's issue template
 ├── tests/                      # tests for hooks/
 └── install.sh                  # links skills/ into place
 ```
@@ -39,6 +41,7 @@ off. For Claude Code, in `~/.claude/settings.json`:
 | ------------------------------------------------- | --------------------------------------------------------------------- |
 | Workflow skills                                   | this repo, linked into `~/.claude/skills/`                            |
 | How to run a repo's tests, its version pins       | that repo's `AGENTS.md` (read by Claude Code and other agents)        |
+| Agent bug report template                         | each repo's `.github/ISSUE_TEMPLATE/agent_bug_report.md` (copy of `templates/`) |
 | AI attribution check                              | each repo's `.github/scripts/check_ai_attribution.py` (copy of `hooks/`) |
 
 ## Attribution policy
