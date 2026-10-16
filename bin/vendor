@@ -25,7 +25,7 @@ sync() {  # sync <source> <destination in repo> <repo>
 }
 
 for repo in "$@"; do
-    [[ -d $repo/.git ]] || { echo "not a git checkout: $repo" >&2; exit 2; }
+    [[ -e $repo/.git ]] || { echo "not a git checkout: $repo" >&2; exit 2; }
     sync skills/bugfix-from-slack/SKILL.md .claude/skills/bugfix-from-slack/SKILL.md "$repo"
     sync templates/agent_bug_report.md .github/ISSUE_TEMPLATE/agent_bug_report.md "$repo"
     if [[ -e $repo/.github/scripts/check_ai_attribution.py ]]; then
