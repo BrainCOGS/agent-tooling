@@ -7,12 +7,12 @@ agent-tooling/
 ├── bin/
 │   └── mint-agent-token        # short-lived token for the braincogs-claude-agent bot
 ├── claude-hooks/
-│   └── require_agent_bot.py    # PreToolUse hook: BrainCOGS issues/PRs only as the bot
+│   └── require_agent_bot.py    # PreToolUse hook: BrainCOGS issues only as the bot
 ├── hooks/
 │   └── check_ai_attribution.py # commit-msg hook + CI check, vendored into each repo
 ├── skills/
 │   └── bugfix-from-slack/
-│       └── SKILL.md            # Slack error -> regression test -> issue -> fix -> draft PR
+│       └── SKILL.md            # Slack error -> regression test -> issue -> fix -> PR
 ├── templates/
 │   └── agent_bug_report.md     # canonical copy of each repo's issue template
 ├── tests/                      # tests for hooks/
@@ -46,12 +46,14 @@ doesn't edit settings.
 }
 ```
 
-It blocks any command that would open an issue or PR in a BrainCOGS repo with
-the user's account:
-- `gh issue create` or `gh pr create` without an inline `GH_TOKEN=$(mint-agent-token)`
-- the same commands in a BrainCOGS checkout without an explicit `-R BrainCOGS/<repo>`
-- `gh api` POSTs to `.../issues` or `.../pulls`
-- GitHub MCP create tools
+It blocks any command that would open an issue in a BrainCOGS repo with the
+user's account:
+- `gh issue create` without an inline `GH_TOKEN=$(mint-agent-token)`
+- the same command in a BrainCOGS checkout without an explicit `-R BrainCOGS/<repo>`
+- `gh api` POSTs to `.../issues`
+- GitHub MCP issue-create tools
+
+Pull requests aren't checked. The user opens those from their own account.
 
 Everything else passes untouched, and an unreadable payload fails closed. The
 hook only covers Claude Code on machines where it's registered. Other agents, and
@@ -83,15 +85,13 @@ key is never committed here: `*.pem` is gitignored, and gitleaks and
   `Signed-off-by`. The exceptions are non-AI automation: Dependabot, GitHub
   Actions, Renovate, pre-commit.ci, and the GitHub web UI as committer.
 - No `Generated with <agent>` lines in commit messages.
-- The bot (`braincogs-claude-agent`) opens issues and PRs. Commits and pushes
-  stay with the human who ran the agent.
-- **Merge PRs the bot opened with "Rebase and merge" (or a merge commit), not
-  "Squash and merge".** GitHub attributes a squash commit to the PR's opener and
-  lists the commit authors as `Co-authored-by`. Squashing a bot PR would put
-  `braincogs-claude-agent[bot]` on the default branch as the author. For an
-  example from the Copilot era, see tech_calendar_streamlit `78c6983`:
-  author `copilot-swe-agent[bot]`, `Co-authored-by: tabedzki`. The CI check
-  on pushes to the default branch flags it if this happens.
+- The bot (`braincogs-claude-agent`) opens issues. PRs, commits and pushes
+  stay with the human who ran the agent. A PR opened by an agent account
+  (Copilot coding agent, other GitHub Apps) is a different case: GitHub
+  attributes its squash commit to that account, so merge it with "Rebase and
+  merge" (see tech_calendar_streamlit `78c6983`: author
+  `copilot-swe-agent[bot]`, `Co-authored-by: tabedzki`). The CI check on pushes
+  to the default branch flags it if this happens.
 
 `hooks/check_ai_attribution.py` enforces this in two places:
 

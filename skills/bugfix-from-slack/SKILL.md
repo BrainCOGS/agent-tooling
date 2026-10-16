@@ -1,6 +1,6 @@
 ---
 name: bugfix-from-slack
-description: Use when fixing an error someone reported in Slack (a traceback, a failed cron job or alert, a rig error) in a BrainCOGS repo. Reproduces it with a regression test, files an agent bug report as the braincogs-claude-agent bot, fixes it, commits with the standard Assisted-by trailer and opens a draft PR as the bot.
+description: Use when fixing an error someone reported in Slack (a traceback, a failed cron job or alert, a rig error) in a BrainCOGS repo. Reproduces it with a regression test, files an agent bug report as the braincogs-claude-agent bot, fixes it, commits with the standard Assisted-by trailer and opens a draft PR as the user.
 ---
 
 # Fix a Slack-reported error in a BrainCOGS repo
@@ -11,11 +11,11 @@ Who does what:
 | ----------------------- | --------------------------------- | --------------------------------------------- |
 | Commits                 | the user (their git config)       | `git commit`, with one `Assisted-by` trailer  |
 | Push                    | the user's own credentials        | `git push -u origin <branch>`                 |
-| Issue, PR, PR/issue edits | the `braincogs-claude-agent` bot | `GH_TOKEN=$(mint-agent-token) gh ...`         |
+| PR, PR edits            | the user (their `gh` login)       | `gh pr create ...`                            |
+| Issue, issue edits      | the `braincogs-claude-agent` bot  | `GH_TOKEN=$(mint-agent-token) gh ...`         |
 
 Humans author commits; AI help is disclosed, never credited as an author. The
-bot account opens the conversation on GitHub, but it never pushes or commits:
-the app has issues and pull-requests permissions only, no contents.
+bot account only files the bug report; it never pushes, commits or opens PRs.
 
 ## 0. Read the repo's instructions
 
@@ -60,10 +60,10 @@ If the author is anyone else, stop and tell the user. Don't close or re-file the
 issue yourself.
 
 A PreToolUse hook (`claude-hooks/require_agent_bot.py`) blocks
-`gh issue create`/`gh pr create` (and `gh api` POSTs to issues/pulls) in
-BrainCOGS repos unless they carry the inline `GH_TOKEN=$(mint-agent-token)` and
-an explicit `-R BrainCOGS/<repo>`. It also blocks GitHub MCP tools from opening
-them. If it blocks you, fix the command; don't work around the hook.
+`gh issue create` (and `gh api` POSTs to issues) in BrainCOGS repos unless it
+carries the inline `GH_TOKEN=$(mint-agent-token)` and an explicit
+`-R BrainCOGS/<repo>`. It also blocks GitHub MCP tools from opening issues. If
+it blocks you, fix the command; don't work around the hook.
 
 Skip this step if the repo has issues turned off (element-array-ephys,
 element-calcium-imaging, iblapps). Put the same sections in the PR body instead.
@@ -98,18 +98,15 @@ Assisted-by: ClaudeCode:claude-opus-5-5
   fix the message; never use `--no-verify`. If the hook isn't installed in this
   checkout, run `prek install`.
 
-## 5. Push as the user, open the PR as the bot
+## 5. Push and open the PR as the user
 
 ```bash
 git push -u origin <branch>
-GH_TOKEN=$(mint-agent-token) gh pr create -R BrainCOGS/<repo> \
+gh pr create -R BrainCOGS/<repo> \
   --base <default-branch> --head <branch> --draft --reviewer tabedzki \
   --title "fix: <summary>" --body-file <pr.md>
 GH_TOKEN=$(mint-agent-token) gh issue edit <issue> -R BrainCOGS/<repo> --body-file <issue.md>  # Linked PR: #<pr>
 ```
-
-Confirm the bot opened the PR too: `gh pr view <pr-url> --json author -q .author.login`
-must print `app/braincogs-claude-agent`.
 
 The PR body:
 - starts with `:robot: _AI text below_ :robot:`
@@ -121,17 +118,15 @@ The PR body:
 Always pass `-R BrainCOGS/<repo>`. The element repos are forks, so a bare
 `gh pr create` targets the DataJoint upstream.
 
-When the work is done, mark the PR ready (`GH_TOKEN=$(mint-agent-token) gh pr ready ...`)
-and tell the user it must be merged with **Rebase and merge** (or a merge
-commit), not Squash. GitHub attributes a squash commit to the PR's opener, which
-is the bot. So keep the branch's commits clean: one or a few Conventional
-Commits, each with the trailer, and no "fix typo" or "address review" commits
-(amend or fixup them instead).
+When the work is done, mark the PR ready (`gh pr ready ...`). Keep the
+branch's commits clean: one or a few Conventional Commits, each with the
+trailer, and no "fix typo" or "address review" commits (amend or fixup them
+instead).
 
 ## The token
 
-- Mint a fresh token for each `gh` command that acts as the bot, inline in that
-  command's environment, as above. Tokens last an hour; minting is cheap.
+- Mint a fresh token for each `gh` command that acts as the bot (issues only),
+  inline in that command's environment, as above. Tokens last an hour; minting is cheap.
 - Never print, echo, log or save the token. Never `export GH_TOKEN`, run
   `gh auth login` with it, or use it for `git push`.
 - Use your own credentials (no `GH_TOKEN`) for everything that isn't the bot
@@ -139,7 +134,7 @@ Commits, each with the trailer, and no "fix typo" or "address review" commits
 - `mint-agent-token` is on PATH, linked from agent-tooling's `bin/`. It reads
   the key from `~/.config/braincogs-agent/agent.pem`. It needs no environment
   variables, since the App ID defaults to braincogs-claude-agent. If it fails,
-  stop and tell the user; don't fall back to opening the issue or PR with the
+  stop and tell the user; don't fall back to opening the issue with the
   user's account.
 
 ## Agents that commit as themselves

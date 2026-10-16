@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Claude Code PreToolUse hook: BrainCOGS issues and PRs are opened by the bot.
+"""Claude Code PreToolUse hook: BrainCOGS issues are opened by the bot.
 
-The agent opens issues and pull requests in BrainCOGS repos as the
-braincogs-claude-agent GitHub App, never with the user's account:
+The agent opens issues in BrainCOGS repos as the braincogs-claude-agent GitHub
+App, never with the user's account:
 
     GH_TOKEN=$(mint-agent-token) gh issue create -R BrainCOGS/<repo> ...
-    GH_TOKEN=$(mint-agent-token) gh pr create    -R BrainCOGS/<repo> ...
 
 This hook blocks (exit 2, reason on stderr for the agent) any Bash command that
-creates an issue or PR in a BrainCOGS repo without that inline token:
-`gh issue create`, `gh pr create`, and `gh api` POSTs to .../issues or .../pulls.
-It also requires an explicit `-R BrainCOGS/<repo>` in a BrainCOGS checkout,
-because the element repos are forks and a bare `gh pr create` targets the
-upstream. GitHub MCP tools that create issues or PRs in BrainCOGS are blocked
-outright, since they always act as the user.
+creates an issue in a BrainCOGS repo without that inline token: `gh issue
+create` and `gh api` POSTs to .../issues. It also requires an explicit
+`-R BrainCOGS/<repo>` in a BrainCOGS checkout, because the element repos are
+forks and a bare `gh issue create` targets the upstream. GitHub MCP tools that
+create issues in BrainCOGS are blocked outright, since they always act as the
+user.
 
-Commands that don't create issues or PRs, and repos outside BrainCOGS, pass
+Pull requests are not checked: the user opens those from their own account.
+Commands that don't create issues, and repos outside BrainCOGS, pass
 untouched. A payload the hook can't read fails closed.
 
 Registered in ~/.claude/settings.json (see agent-tooling's install.sh).
@@ -43,14 +43,14 @@ HEREDOC_RE = re.compile(
 )
 QUICK_RE = re.compile(r"\bgh\b")
 CREATE_PATH_RE = re.compile(
-    r"^/?repos/(?P<owner>[^/]+)/(?P<repo>[^/]+)/(?:issues|pulls)/?$", re.I
+    r"^/?repos/(?P<owner>[^/]+)/(?P<repo>[^/]+)/issues/?$", re.I
 )
 
 HOW = (
-    "Open BrainCOGS issues and PRs as the braincogs-claude-agent bot, with the "
+    "Open BrainCOGS issues as the braincogs-claude-agent bot, with the "
     "token inline in the same command: "
-    "`GH_TOKEN=$(mint-agent-token) gh issue create -R BrainCOGS/<repo> ...` "
-    "(or `gh pr create ... --draft --reviewer tabedzki`). See the bugfix-from-slack skill."
+    "`GH_TOKEN=$(mint-agent-token) gh issue create -R BrainCOGS/<repo> ...`. "
+    "See the bugfix-from-slack skill."
 )
 
 
@@ -143,8 +143,6 @@ def check_segment(seg: list[str], cwd_braincogs: bool) -> None:
     kind = None
     if args[:2] in (["issue", "create"], ["issue", "new"]):
         kind = "an issue"
-    elif args[:2] in (["pr", "create"], ["pr", "new"]):
-        kind = "a PR"
     elif args[:1] == ["api"]:
         path = next(
             (
@@ -164,7 +162,7 @@ def check_segment(seg: list[str], cwd_braincogs: bool) -> None:
             m = CREATE_PATH_RE.match(path)
             owner = m["owner"]
             if owner.lower() == ORG or (owner == "{owner}" and cwd_braincogs):
-                kind = "an issue or PR (gh api)"
+                kind = "an issue (gh api)"
                 if env.get("GH_TOKEN") != MINT and env.get("GITHUB_TOKEN") != MINT:
                     raise Blocked(
                         f"Blocked: this would create {kind} in a BrainCOGS repo with your account. {HOW}"
@@ -201,32 +199,31 @@ def check_command(command: str, cwd_braincogs: bool) -> None:
     try:
         segs = _segments(command)
     except ValueError as e:
-        if re.search(r"\bgh\s+(issue|pr)\s+(create|new)\b|\bgh\s+api\b", command):
+        if re.search(r"\bgh\s+issue\s+(create|new)\b|\bgh\s+api\b", command):
             raise Blocked(
                 f"Blocked: could not parse this command ({e}) to check who opens the "
-                f"issue or PR. Write it as one plain command. {HOW}"
+                f"issue. Write it as one plain command. {HOW}"
             ) from e
         return
     for seg in segs:
         check_segment(seg, cwd_braincogs)
 
 
-MCP_CREATE_RE = re.compile(
-    r"create_(issue|pull_request)|issue_write|pull_request_write|create_pr\b", re.I
-)
+MCP_CREATE_RE = re.compile(r"create_issue|issue_write", re.I)
 
 
 def check_mcp(tool: str, tool_input: dict) -> None:
     if "github" not in tool.lower() or not MCP_CREATE_RE.search(tool):
         return
-    if re.search(r"issue_write|pull_request_write", tool, re.I) and tool_input.get(
-        "method"
-    ) not in (None, "create"):
+    if re.search(r"issue_write", tool, re.I) and tool_input.get("method") not in (
+        None,
+        "create",
+    ):
         return
     owner = str(tool_input.get("owner", ""))
     if owner.lower() == ORG:
         raise Blocked(
-            f"Blocked: {tool} would open this issue or PR in BrainCOGS with your account. {HOW}"
+            f"Blocked: {tool} would open this issue in BrainCOGS with your account. {HOW}"
         )
 
 

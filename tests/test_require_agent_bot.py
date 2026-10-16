@@ -81,6 +81,13 @@ def other_checkout(tmp_path):
         f"cd /tmp && {BOT} gh issue create -R BrainCOGS/x -t t -b b && echo done",
         f"{BOT} gh api -X POST repos/BrainCOGS/x/issues -f title=t",
         f"{BOT} gh pr create -R BrainCOGS/x --body-file - <<'EOF'\nIt's a body with gh issue create in it\nEOF",
+        # PRs are opened by the user, not the bot:
+        "gh pr create -R BrainCOGS/x --draft --title t --body b",
+        "gh pr new -R BrainCOGS/x -t t -b b",
+        "gh pr create -R BrainCOGS/x --body-file - <<'EOF'\nbody\nEOF",
+        'bash -c "gh pr create -R BrainCOGS/x -t t -b b"',
+        "gh api repos/BrainCOGS/x/pulls -f title=t -f head=b -f base=main",
+        "gh api -X POST repos/BrainCOGS/x/pulls -f title=t -f head=b -f base=main",
         # Not creating anything, or not BrainCOGS:
         "gh issue view 12 -R BrainCOGS/x",
         "gh issue list -R BrainCOGS/x",
@@ -110,7 +117,6 @@ def test_allowed(command):
             'gh issue create -R BrainCOGS/U19-pipeline-python --title "[BUG] x" --body-file b.md',
             "your account",
         ),
-        ("gh pr create -R BrainCOGS/x --draft --title t --body b", "your account"),
         ("gh issue create -R braincogs/x -t t -b b", "your account"),  # owner case
         ("gh issue new -R BrainCOGS/x -t t -b b", "your account"),
         ("gh issue create --repo BrainCOGS/x -t t -b b", "your account"),
@@ -130,16 +136,19 @@ def test_allowed(command):
         ),
         ("cd ~/code/U19 && gh issue create -R BrainCOGS/x -t t -b b", "your account"),
         (
-            "gh pr create -R BrainCOGS/x -t t --body-file - <<'EOF'\nbody\nEOF",
+            "gh issue create -R BrainCOGS/x -t t --body-file - <<'EOF'\nbody\nEOF",
             "your account",
         ),
         ('bash -c "gh issue create -R BrainCOGS/x -t t -b b"', "your account"),
-        ("sh -c 'cd /tmp && gh pr create -R BrainCOGS/x -t t -b b'", "your account"),
+        (
+            "sh -c 'cd /tmp && gh issue create -R BrainCOGS/x -t t -b b'",
+            "your account",
+        ),
         ('eval "gh issue create -R BrainCOGS/x -t t -b b"', "your account"),
         ("/usr/bin/gh issue create -R BrainCOGS/x -t t -b b", "your account"),
         ("gh api -X POST repos/BrainCOGS/x/issues -f title=t", "your account"),
         (
-            "gh api repos/BrainCOGS/x/pulls -f title=t -f head=b -f base=main",
+            "gh api repos/BrainCOGS/x/issues -f title=t -f body=b",  # -f implies POST
             "your account",
         ),
         (
@@ -157,14 +166,20 @@ def test_blocked(command, hint):
 
 
 def test_braincogs_checkout_requires_explicit_repo(braincogs_checkout):
-    code, err = bash(f"{BOT} gh pr create --draft -t t -b b", cwd=braincogs_checkout)
+    code, err = bash(f"{BOT} gh issue create -t t -b b", cwd=braincogs_checkout)
     assert code == 2 and "-R BrainCOGS/<repo>" in err
     code, err = bash("gh issue create -t t -b b", cwd=braincogs_checkout)
     assert code == 2
     code, _ = bash(
-        f"{BOT} gh pr create -R BrainCOGS/x --draft -t t -b b", cwd=braincogs_checkout
+        f"{BOT} gh issue create -R BrainCOGS/x -t t -b b", cwd=braincogs_checkout
     )
     assert code == 0
+
+
+def test_braincogs_checkout_pr_needs_no_bot_or_repo(braincogs_checkout):
+    for cmd in ("gh pr create --draft -t t -b b", "gh pr create -R BrainCOGS/x --fill"):
+        code, err = bash(cmd, cwd=braincogs_checkout)
+        assert code == 0, err
 
 
 def test_braincogs_checkout_api_placeholder(braincogs_checkout):
@@ -202,7 +217,12 @@ def test_missing_or_bad_cwd_is_not_braincogs(tmp_path):
             {"owner": "BrainCOGS", "repo": "x", "title": "t"},
             2,
         ),
-        ("mcp__github__create_pull_request", {"owner": "braincogs", "repo": "x"}, 2),
+        ("mcp__github__create_pull_request", {"owner": "braincogs", "repo": "x"}, 0),
+        (
+            "mcp__github__pull_request_write",
+            {"method": "create", "owner": "BrainCOGS", "repo": "x"},
+            0,
+        ),
         (
             "mcp__github__issue_write",
             {"method": "create", "owner": "BrainCOGS", "repo": "x"},
