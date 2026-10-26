@@ -6,14 +6,11 @@ Skills and helpers for AI agents working on BrainCOGS repos.
 agent-tooling/
 ├── bin/
 │   └── vendor                  # copy the shared files into repo checkouts (--check to find drift)
-├── hooks/
-│   └── check_ai_attribution.py # commit-msg hook + CI check, vendored into each repo
 ├── skills/
 │   └── bugfix-from-slack/
 │       └── SKILL.md            # reported error -> regression test -> issue -> fix -> draft PR
 ├── templates/
 │   └── agent_bug_report.md     # canonical copy of each repo's issue template
-├── tests/                      # tests for hooks/
 └── install.sh                  # links skills/ into place
 ```
 
@@ -47,7 +44,6 @@ off. For Claude Code, in `~/.claude/settings.json`:
 | Workflow skills                                   | this repo, linked into `~/.claude/skills/`; vendored into each repo's `.claude/skills/` |
 | How to run a repo's tests, its version pins       | that repo's `AGENTS.md` (read by Claude Code and other agents)        |
 | Agent bug report template                         | each repo's `.github/ISSUE_TEMPLATE/agent_bug_report.md` (copy of `templates/`) |
-| AI attribution check                              | each repo's `.github/scripts/check_ai_attribution.py` (copy of `hooks/`) |
 
 ## Attribution policy
 
@@ -65,26 +61,14 @@ off. For Claude Code, in `~/.claude/settings.json`:
   A PR opened by an agent account (Copilot coding agent, other GitHub Apps) is
   the exception: GitHub attributes its squash commit to that account, so merge
   it with "Rebase and merge" (see tech_calendar_streamlit `78c6983`: author
-  `copilot-swe-agent[bot]`, `Co-authored-by: tabedzki`). The CI check on pushes
-  to the default branch flags it if this happens.
+  `copilot-swe-agent[bot]`, `Co-authored-by: tabedzki`).
 
-`hooks/check_ai_attribution.py` enforces this in two places:
-
-- **Local commit-msg hook**: checks the message, plus the author and committer
-  git is about to use.
-- **CI**: checks every commit in a PR or push (`--since <base>`). This catches
-  commits made on GitHub that no local hook sees, like cloud agents' commits.
-
-The checker is robust to new harnesses and models:
-- Any one-word harness is accepted. The ones in `KNOWN_HARNESSES` must use their
-  canonical spelling.
-- Any one-token model ID is accepted. Models from the vendors in `MODEL_RULES`
-  must match that vendor's API ID format.
-- Agent identities are recognized four ways: GitHub App bot accounts (`[bot]`),
-  AI vendor email domains, agent names and GitHub logins, and aider-style
-  `(aider)` suffixes.
-
-To support a new agent, add it to the matching table and add a test.
+Nothing enforces this. The repos vendored a commit-msg hook and CI check
+(`check_ai_attribution.py`) until 2026-10-26. It only checked the format of a
+disclosure, not whether one was missing: an agent committing as the user looks
+the same as the user. On the private repos it couldn't be a required check
+either, so it reported after merging. Agents follow the policy from each repo's
+`AGENTS.md` and the skill; review the trailers in PRs.
 
 ### Bot-authored commits
 
@@ -95,11 +79,10 @@ tech_calendar_streamlit 30 (8 PRs), WaterPubsGUI 3, U19-pipeline-matlab 7.
 - **Past commits stay as they are.** They're merged through merge commits.
   Rewriting them would change every later SHA in four repos, three of them
   public, and break clones, forks and links. They already disclose the agent
-  (it's the author), just not in the current form. The CI check only looks at
-  new commits, so they never trip it.
+  (it's the author), just not in the current form.
 - **From 2026-10-15 on, agents don't author commits.** An agent that commits
   as itself (Copilot coding agent, other GitHub Apps) can still draft a branch.
-  Before merge, a human re-authors the commits, and CI fails until they do:
+  Before merge, a human re-authors the commits:
 
   ```bash
   git rebase -x 'git commit --amend --no-edit --reset-author --trailer "Assisted-by: Copilot:<model>"' origin/<default-branch>
@@ -120,38 +103,3 @@ Then open a PR in each repo from your account. Never edit a vendored copy; chang
 it here and re-run `bin/vendor`. Per-repo details (how to run tests, version
 pins) stay in that repo's `AGENTS.md`, which is why the skill itself needs no
 per-repo edits.
-
-## Changing the attribution check
-
-1. Edit `hooks/check_ai_attribution.py` and `tests/`, then run
-   `uv run --no-project --with pytest pytest`.
-2. Run `bin/vendor` on each repo and open a PR. Don't edit a vendored copy.
-
-The file opts out of each repo's ruff (`# ruff: noqa`, `# fmt: off`), so the
-repos' different rules and line lengths leave it byte-identical. This repo still
-lints it with `--ignore-noqa`. A repo that enables ruff's `PGH` rules also needs
-`".github/scripts/check_ai_attribution.py" = ["PGH004"]` under
-`[lint.per-file-ignores]`, as in WaterPubsGUI.
-
-Each repo wires it up in `.pre-commit-config.yaml`:
-
-```yaml
-- repo: local
-  hooks:
-    - id: ai-attribution
-      name: AI attribution (Assisted-by trailer, no AI authors)
-      language: python
-      entry: python .github/scripts/check_ai_attribution.py
-      stages: [commit-msg]
-```
-
-and in `.github/workflows/lint.yml`, with `fetch-depth: 0` on the checkout:
-
-```yaml
-- name: Check AI attribution in the commits of the PR (or push)
-  env:
-    BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-    # On PRs, HEAD is GitHub's synthetic merge commit; check up to the PR's tip.
-    HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-  run: python3 .github/scripts/check_ai_attribution.py --since "$BASE" --head "$HEAD_SHA"
-```
